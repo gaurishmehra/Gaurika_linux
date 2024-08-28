@@ -12,6 +12,8 @@ from dotenv import load_dotenv
 import json
 import subprocess
 import datetime
+import schedule
+import threading
 
 # Load environment variables from .env file
 load_dotenv()
@@ -56,11 +58,57 @@ tools = [
                 "required": ["query"],
             },
         },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "schedule_task",
+            "description": "Schedule a Linux command to run at regular intervals.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "task_name": {
+                        "type": "string",
+                        "description": "A unique name for the scheduled task.",
+                    },
+                    "command": {
+                        "type": "string",
+                        "description": "The Linux command to be executed.",
+                    },
+                    "interval": {
+                        "type": "integer",
+                        "description": "The interval in seconds between each execution of the task.",
+                    }
+                },
+                "required": ["task_name", "command", "interval"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "remove_scheduled_task",
+            "description": "Remove a previously scheduled task.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "task_name": {
+                        "type": "string",
+                        "description": "The name of the task to be removed.",
+                    }
+                },
+                "required": ["task_name"],
+            },
+        },
     }
 ]
 
 # Initialize OpenAI client
 client = OpenAI(api_key=Groq, base_url=Groq_base_url)
+
+# Global variables
+context_history = []
+scheduled_tasks = {}
 
 def load_context_history(filename="context_history.json"):
     try:
@@ -74,9 +122,7 @@ def save_context_history(context_history, filename="context_history.json"):
         json.dump(context_history, f, indent=2)
 
 def execute_linux_command(command, trust_mode):
-    """
-    Executes a Linux command based on the trust mode.
-    """
+    """Executes a Linux command based on the trust mode."""
     if trust_mode == "full":
         try:
             output = subprocess.check_output(command, shell=True, text=True, stderr=subprocess.STDOUT)
@@ -97,9 +143,7 @@ def execute_linux_command(command, trust_mode):
         return "Command execution is disabled in this trust mode."
 
 def get_system_info():
-    """
-    Retrieves basic system information.
-    """
+    """Retrieves basic system information."""
     info = {}
     info['OS'] = subprocess.check_output('uname -s', shell=True, text=True).strip()
     info['Kernel'] = subprocess.check_output('uname -r', shell=True, text=True).strip()
@@ -108,9 +152,7 @@ def get_system_info():
     return json.dumps(info, indent=2)
 
 def chat_stream(messages, model="llama-3.1-70b-versatile", temperature=0.75, max_tokens=4096, tool_choice="auto"):
-    """
-    Stream response from the AI model.
-    """
+    """Stream response from the AI model."""
     response = client.chat.completions.create(
         messages=messages,
         model=model,
@@ -142,9 +184,7 @@ def save_command_history(command, output, filename="command_history.txt"):
         f.write("-" * 50 + "\n")
 
 def handle_tool_calls(tool_calls, trust_mode):
-    """
-    Processes and executes tool calls made by the assistant based on the trust mode.
-    """
+    """Processes and executes tool calls made by the assistant based on the trust mode."""
     if tool_calls:
         print("\nTool Calls:", tool_calls)
         for tool_call in tool_calls:
@@ -176,12 +216,36 @@ def handle_tool_calls(tool_calls, trust_mode):
                     "name": "WebTool",
                     "content": result 
                 })
+            elif tool_call.function.name == "schedule_task":
+                function_args = json.loads(tool_call.function.arguments)
+                task_name = function_args.get("task_name")
+                command = function_args.get("command")
+                interval = function_args.get("interval")
+
+                schedule_task(task_name, command, interval)
+
+                context_history.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "name": "schedule_task",
+                    "content": f"Task '{task_name}' scheduled to run command '{command}' every {interval} seconds."
+                })
+            elif tool_call.function.name == "remove_scheduled_task":
+                function_args = json.loads(tool_call.function.arguments)
+                task_name = function_args.get("task_name")
+
+                remove_scheduled_task(task_name)
+
+                context_history.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "name": "remove_scheduled_task",
+                    "content": f"Task '{task_name}' removed from schedule."
+                })
     return None
 
 def get_user_preferences(filename="user_pref.json"):
-    """
-    Loads or prompts for user preferences and saves them if necessary.
-    """
+    """Loads or prompts for user preferences and saves them if necessary."""
     if os.path.exists(filename):
         with open(filename, "r") as f:
             return json.load(f)
@@ -320,6 +384,30 @@ def WebTool(query):
     print(f"\033[95mTotal time taken: {time.time() - start:.4f} seconds\033[0m")
     return relevant_text
 
+# Task Scheduling functions
+def run_scheduled_tasks():
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+def schedule_task(task_name, command, interval):
+    def job():
+        result = execute_linux_command(command, "full")
+        print(f"Scheduled task '{task_name}' executed:\nCommand: {command}\nResult: {result}")
+        save_command_history(command, result)
+
+    schedule.every(interval).seconds.do(job)
+    scheduled_tasks[task_name] = job
+    print(f"Task '{task_name}' scheduled to run every {interval} seconds")
+
+def remove_scheduled_task(task_name):
+    if task_name in scheduled_tasks:
+        schedule.cancel_job(scheduled_tasks[task_name])
+        del scheduled_tasks[task_name]
+        print(f"Task '{task_name}' has been removed from the schedule")
+    else:
+        print(f"No task named '{task_name}' found in the schedule")
+
 def main():
     global context_history 
     context_history = load_context_history()
@@ -331,7 +419,7 @@ def main():
     # Get system information
     system_info = get_system_info()
 
-    # Update system prompt with user preferences, trust mode, and system info
+    # Update system prompt with user preferences, trust mode, system info, and tool descriptions
     system_message = f"""You are an advanced AI assistant specialized in Linux system administration and command execution. Your primary function is to assist users with their Linux-related tasks, provide information, and execute commands when permitted.
 
 **User Information:**
@@ -363,15 +451,22 @@ Remember, your role is to assist and educate. Always strive to empower the user 
 
 Current date and time: {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
-You have the following tools at your disposal:
-1. execute_command: Use this to run Linux commands based on the current trust mode.
-2. WebTool: Use this to perform web searches and retrieve relevant information when needed.
+**Available Tools:**
+1. **execute_command:** Execute a single Linux command. This tool respects the current trust mode.
+2. **WebTool:** Perform a web search and retrieve relevant content.
+3. **schedule_task:** Schedule a Linux command to run at regular intervals. Provide a unique task name, the command to execute, and the interval in seconds.
+4. **remove_scheduled_task:** Remove a previously scheduled task by its name.
 
 Always use these tools instead of simulating their output. The system will handle any necessary user confirmations or restrictions based on the trust mode.
 """
 
     if not context_history:
         context_history.append({"role": "system", "content": system_message})
+
+    # Start scheduler thread
+    scheduler_thread = threading.Thread(target=run_scheduled_tasks)
+    scheduler_thread.daemon = True
+    scheduler_thread.start()
 
     print(f"Welcome, {user_preferences['name']}! I'm your Linux assistant. How can I help you today?")
     while True:
@@ -397,85 +492,3 @@ Always use these tools instead of simulating their output. The system will handl
 
 if __name__ == "__main__":
     main()
-
-# New awesome feature: Task Scheduling
-
-import schedule
-import time
-import threading
-
-scheduled_tasks = {}
-
-def run_scheduled_tasks():
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
-
-def schedule_task(task_name, command, interval):
-    def job():
-        result = execute_linux_command(command, "full")
-        print(f"Scheduled task '{task_name}' executed:\nCommand: {command}\nResult: {result}")
-        save_command_history(command, result)
-
-    schedule.every(interval).seconds.do(job)
-    scheduled_tasks[task_name] = job
-    print(f"Task '{task_name}' scheduled to run every {interval} seconds")
-
-def remove_scheduled_task(task_name):
-    if task_name in scheduled_tasks:
-        schedule.cancel_job(scheduled_tasks[task_name])
-        del scheduled_tasks[task_name]
-        print(f"Task '{task_name}' has been removed from the schedule")
-    else:
-        print(f"No task named '{task_name}' found in the schedule")
-
-# Add these lines to the main() function, just before the main loop
-scheduler_thread = threading.Thread(target=run_scheduled_tasks)
-scheduler_thread.daemon = True
-scheduler_thread.start()
-
-# Add these new tools to the tools list
-tools.extend([
-    {
-        "type": "function",
-        "function": {
-            "name": "schedule_task",
-            "description": "Schedule a Linux command to run at regular intervals",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "task_name": {
-                        "type": "string",
-                        "description": "A unique name for the scheduled task",
-                    },
-                    "command": {
-                        "type": "string",
-                        "description": "The Linux command to be executed",
-                    },
-                    "interval": {
-                        "type": "integer",
-                        "description": "The interval in seconds between each execution of the task",
-                    }
-                },
-                "required": ["task_name", "command", "interval"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "remove_scheduled_task",
-            "description": "Remove a previously scheduled task",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "task_name": {
-                        "type": "string",
-                        "description": "The name of the task to be removed",
-                    }
-                },
-                "required": ["task_name"],
-            },
-        },
-    }
-])
