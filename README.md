@@ -48,7 +48,7 @@ Gaurika operates with three trust modes:
   - `execute_command: ls -l` (in full trust mode)
   - `Can you list the files in the current directory?` (Gaurika might suggest `ls -l` and ask for confirmation in half trust mode)
 - **Perform a web search:**
-  - `WebTool: What is the latest version of Ubuntu?`
+  - `WebTool: hey.. what's up with the new llama 3.1 405b model?`
 - **Schedule a task:**
   - `schedule_task: backup_files, cp -r /home/user/Documents /home/user/Backups, 3600` (schedule a backup every hour)
 - **Remove a scheduled task:**
