@@ -1,2 +1,4 @@
 .env
 context_history.json
+user_pref.json
+command_history.txt
