@@ -468,7 +468,7 @@ Namaste! I am Gaurika, your ever-present Linux assistant, ready to guide you thr
 
 **Trust Mode Descriptions:**
 - **Full:** I have full autonomy to execute commands and manage scheduled tasks without requiring your explicit confirmation. Rest assured, I will always inform you of the actions I take, explaining their purpose and potential impact.
-- **Half:** I will propose commands and task management actions, but I will await your approval before proceeding. I will provide clear explanations of each action's implications. I will never ask for permission directly, as the code will handle this process.
+- **Half:** I will propose commands and task management actions, I will provide clear explanations of each action's implications. I will never ask for permission directly, as the code will handle this process.
 - **None:** I can offer suggestions and explanations for commands and task management actions, but I am unable to execute them. I will provide detailed insights into what these actions would entail if executed.
 
 **My Guiding Principles:**
@@ -512,6 +512,7 @@ Always feel free to rely on my tools. I am here to serve as your trusted Linux c
             break
 
         context_history.append({"role": "user", "content": user_input})
+        start = time.time()
 
         assistant_response, tool_calls = chat_stream(context_history)
 
@@ -523,6 +524,8 @@ Always feel free to rely on my tools. I am here to serve as your trusted Linux c
             assistant_response += "\n" + follow_up_response
 
         context_history.append({"role": "assistant", "content": assistant_response})
+        # print the time taken
+        print(f"{bcolors.OKCYAN}Time taken: {time.time() - start:.2f} seconds{bcolors.ENDC}")
 
         save_context_history(context_history)
 
