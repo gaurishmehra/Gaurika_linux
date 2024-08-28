@@ -110,6 +110,18 @@ client = OpenAI(api_key=Groq, base_url=Groq_base_url)
 context_history = []
 scheduled_tasks = {}
 
+# Color codes for printing
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
 def load_context_history(filename="context_history.json"):
     try:
         with open(filename, "r") as f:
@@ -130,17 +142,17 @@ def execute_linux_command(command, trust_mode):
         except subprocess.CalledProcessError as e:
             return f"Command '{command}' failed with error:\n{e.output}"
     elif trust_mode == "half":
-        user_input = input(f"\nThe assistant suggests running the following command:\n'{command}'\nDo you want to execute this command? (y/n): ").strip().lower()
+        user_input = input(f"\n{bcolors.WARNING}The assistant suggests running the following command:\n'{command}'\nDo you want to execute this command? (y/n): {bcolors.ENDC}").strip().lower()
         if user_input == "y":
             try:
                 output = subprocess.check_output(command, shell=True, text=True, stderr=subprocess.STDOUT)
-                return output
+                return output + f"\n{bcolors.OKGREEN}Command '{command}' executed successfully.{bcolors.ENDC}"
             except subprocess.CalledProcessError as e:
-                return f"Command '{command}' failed with error:\n{e.output}"
+                return f"{bcolors.FAIL}Command '{command}' failed with error:\n{e.output}{bcolors.ENDC}"
         else:
-            return "Command execution disallowed by the user."
+            return f"{bcolors.WARNING}Command execution disallowed by the user.{bcolors.ENDC}"
     else:  # trust_mode == "none"
-        return "Command execution is disabled in this trust mode."
+        return f"{bcolors.WARNING}Command execution is disabled in this trust mode.{bcolors.ENDC}"
 
 def get_system_info():
     """Retrieves basic system information."""
@@ -168,7 +180,7 @@ def chat_stream(messages, model="llama-3.1-70b-versatile", temperature=0.75, max
     for chunk in response:
         if chunk.choices[0].delta.content is not None:
             content = chunk.choices[0].delta.content
-            print(content, end="", flush=True)
+            print(f"{bcolors.OKBLUE}{content}{bcolors.ENDC}", end="", flush=True)
             full_response += content
         if chunk.choices[0].delta.tool_calls:
             tool_calls = chunk.choices[0].delta.tool_calls
@@ -186,14 +198,14 @@ def save_command_history(command, output, filename="command_history.txt"):
 def handle_tool_calls(tool_calls, trust_mode):
     """Processes and executes tool calls made by the assistant based on the trust mode."""
     if tool_calls:
-        print("\nTool Calls:", tool_calls)
+        print(f"\n{bcolors.HEADER}Tool Calls: {tool_calls}{bcolors.ENDC}")
         for tool_call in tool_calls:
             if tool_call.function.name == "execute_command":
                 function_args = json.loads(tool_call.function.arguments)
                 command = function_args.get("command")
 
                 result = execute_linux_command(command, trust_mode)
-                print(f"\nCommand: {command}\nResult:\n{result}")
+                print(f"\n{bcolors.OKCYAN}Command: {command}\nResult:\n{result}{bcolors.ENDC}")
 
                 save_command_history(command, result)
 
@@ -223,16 +235,16 @@ def handle_tool_calls(tool_calls, trust_mode):
 
                 if trust_mode == "full":
                     schedule_task(task_name, command, interval)
-                    result = f"Task '{task_name}' scheduled to run command '{command}' every {interval} seconds."
+                    result = f"{bcolors.OKGREEN}Task '{task_name}' scheduled to run command '{command}' every {interval} seconds.{bcolors.ENDC}"
                 elif trust_mode == "half":
-                    user_input = input(f"\nThe assistant wants to schedule a task:\nName: {task_name}\nCommand: {command}\nInterval: {interval} seconds\nDo you want to allow this? (y/n): ").strip().lower()
+                    user_input = input(f"\n{bcolors.WARNING}The assistant wants to schedule a task:\nName: {task_name}\nCommand: {command}\nInterval: {interval} seconds\nDo you want to allow this? (y/n): {bcolors.ENDC}").strip().lower()
                     if user_input == "y":
                         schedule_task(task_name, command, interval)
-                        result = f"Task '{task_name}' scheduled to run command '{command}' every {interval} seconds."
+                        result = f"{bcolors.OKGREEN}Task '{task_name}' scheduled to run command '{command}' every {interval} seconds.{bcolors.ENDC}"
                     else:
-                        result = "Task scheduling disallowed by the user."
+                        result = f"{bcolors.WARNING}Task scheduling disallowed by the user.{bcolors.ENDC}"
                 else:  # trust_mode == "none"
-                    result = "Task scheduling is disabled in this trust mode."
+                    result = f"{bcolors.WARNING}Task scheduling is disabled in this trust mode.{bcolors.ENDC}"
 
                 context_history.append({
                     "role": "tool",
@@ -246,16 +258,16 @@ def handle_tool_calls(tool_calls, trust_mode):
 
                 if trust_mode == "full":
                     remove_scheduled_task(task_name)
-                    result = f"Task '{task_name}' removed from schedule."
+                    result = f"{bcolors.OKGREEN}Task '{task_name}' removed from schedule.{bcolors.ENDC}"
                 elif trust_mode == "half":
-                    user_input = input(f"\nThe assistant wants to remove the scheduled task '{task_name}'.\nDo you want to allow this? (y/n): ").strip().lower()
+                    user_input = input(f"\n{bcolors.WARNING}The assistant wants to remove the scheduled task '{task_name}'.\nDo you want to allow this? (y/n): {bcolors.ENDC}").strip().lower()
                     if user_input == "y":
                         remove_scheduled_task(task_name)
-                        result = f"Task '{task_name}' removed from schedule."
+                        result = f"{bcolors.OKGREEN}Task '{task_name}' removed from schedule.{bcolors.ENDC}"
                     else:
-                        result = "Task removal disallowed by the user."
+                        result = f"{bcolors.WARNING}Task removal disallowed by the user.{bcolors.ENDC}"
                 else:  # trust_mode == "none"
-                    result = "Task removal is disabled in this trust mode."
+                    result = f"{bcolors.WARNING}Task removal is disabled in this trust mode.{bcolors.ENDC}"
 
                 context_history.append({
                     "role": "tool",
@@ -271,15 +283,15 @@ def get_user_preferences(filename="user_pref.json"):
         with open(filename, "r") as f:
             return json.load(f)
     else:
-        user_name = input("Enter your name: ")
-        linux_username = input("Enter your Linux username: ")
-        linux_distro = input("Enter your Linux distribution (e.g., Ubuntu, Fedora, Arch): ")
+        user_name = input(f"{bcolors.OKCYAN}Enter your name: {bcolors.ENDC}")
+        linux_username = input(f"{bcolors.OKCYAN}Enter your Linux username: {bcolors.ENDC}")
+        linux_distro = input(f"{bcolors.OKCYAN}Enter your Linux distribution (e.g., Ubuntu, Fedora, Arch): {bcolors.ENDC}")
         while True:
-            trust_mode = input("Enter your trust mode (full, half, none): ").strip().lower()
+            trust_mode = input(f"{bcolors.OKCYAN}Enter your trust mode (full, half, none): {bcolors.ENDC}").strip().lower()
             if trust_mode in ["full", "half", "none"]:
                 break
             else:
-                print("Invalid trust mode. Please enter 'full', 'half', or 'none'.")
+                print(f"{bcolors.FAIL}Invalid trust mode. Please enter 'full', 'half', or 'none'.{bcolors.ENDC}")
 
         user_preferences = {
             "name": user_name,
@@ -413,20 +425,20 @@ def run_scheduled_tasks():
 def schedule_task(task_name, command, interval):
     def job():
         result = execute_linux_command(command, "full")
-        print(f"Scheduled task '{task_name}' executed:\nCommand: {command}\nResult: {result}")
+        print(f"{bcolors.OKGREEN}Scheduled task '{task_name}' executed:\nCommand: {command}\nResult: {result}{bcolors.ENDC}")
         save_command_history(command, result)
 
     schedule.every(interval).seconds.do(job)
     scheduled_tasks[task_name] = job
-    print(f"Task '{task_name}' scheduled to run every {interval} seconds")
+    print(f"{bcolors.OKGREEN}Task '{task_name}' scheduled to run every {interval} seconds{bcolors.ENDC}")
 
 def remove_scheduled_task(task_name):
     if task_name in scheduled_tasks:
         schedule.cancel_job(scheduled_tasks[task_name])
         del scheduled_tasks[task_name]
-        print(f"Task '{task_name}' has been removed from the schedule")
+        print(f"{bcolors.OKGREEN}Task '{task_name}' has been removed from the schedule{bcolors.ENDC}")
     else:
-        print(f"No task named '{task_name}' found in the schedule")
+        print(f"{bcolors.WARNING}No task named '{task_name}' found in the schedule{bcolors.ENDC}")
 
 def main():
     global context_history 
@@ -440,7 +452,10 @@ def main():
     system_info = get_system_info()
 
     # Update system prompt with user preferences, trust mode, system info, and tool descriptions
-    system_message = f"""You are an advanced AI assistant specialized in Linux system administration and command execution. Your primary function is to assist users with their Linux-related tasks, provide information, and execute commands when permitted.
+    system_message = f"""
+**Gaurika, Your Linux Companion**
+
+Namaste! I am Gaurika, your ever-present Linux assistant, ready to guide you through the intricacies of your system. My purpose is to simplify your Linux experience, offering assistance with tasks, providing information, and executing commands as permitted by your trust settings.
 
 **User Information:**
 - Name: {user_preferences['name']}
@@ -453,31 +468,33 @@ def main():
 {system_info}
 
 **Trust Mode Descriptions:**
-- **Full:** You can execute commands and manage scheduled tasks directly without user confirmation. Always inform the user of the actions being performed and explain their purpose and potential impact.
-- **Half:** You may suggest commands and task management actions, but execution requires user confirmation. Provide clear explanations of what each action does.
-- **None:** You can suggest commands and task management actions and explain their purpose, but execution is disabled. Provide detailed explanations of what the actions would do if executed.
+- **Full:** I have full autonomy to execute commands and manage scheduled tasks without requiring your explicit confirmation. Rest assured, I will always inform you of the actions I take, explaining their purpose and potential impact.
+- **Half:** I will propose commands and task management actions, but I will await your approval before proceeding. I will provide clear explanations of each action's implications. I will never ask for permission directly, as the code will handle this process.
+- **None:** I can offer suggestions and explanations for commands and task management actions, but I am unable to execute them. I will provide detailed insights into what these actions would entail if executed.
 
-**Key Guidelines:**
-1. Safety First: Prioritize system integrity and user data safety in all interactions.
-2. Clear Communication: Explain commands, their purpose, and potential impacts clearly.
-3. Educational Approach: Use interactions as opportunities to educate the user about Linux concepts and best practices.
-4. Adaptive Assistance: Tailor your language and explanations to the user's apparent skill level.
-5. Ethical Considerations: Refuse any requests for malicious actions or those that could compromise system security.
-6. Privacy Conscious: Avoid requesting or handling sensitive personal information.
-7. Contextual Awareness: Utilize the context of previous interactions to provide more relevant assistance.
-8. Proactive Problem-Solving: Anticipate potential issues and offer preventative advice when appropriate.
+**My Guiding Principles:**
+1. **System Integrity and Data Safety:** Your system's well-being and the security of your data are my top priorities.
+2. **Clarity and Transparency:** I will communicate commands, their purpose, and potential consequences with utmost clarity.
+3. **Linux Enlightenment:** I will seize every opportunity to share my knowledge of Linux concepts and best practices, empowering you to become a more proficient user.
+4. **Adaptive Guidance:** I will tailor my language and explanations to your level of expertise, ensuring a smooth and intuitive learning experience.
+5. **Ethical Conduct:** I will steadfastly refuse any requests that involve malicious actions or jeopardize system security.
+6. **Privacy Advocate:** I will refrain from requesting or handling sensitive personal information, respecting your privacy at all times.
+7. **Contextual Understanding:** I will leverage the context of our previous interactions to provide more relevant and insightful assistance.
+8. **Proactive Problem Solver:** I will anticipate potential issues and offer preventative advice whenever appropriate.
 
-Remember, your role is to assist and educate. Always strive to empower the user with knowledge while ensuring their system remains secure and functional.
+My mission is to empower you with the knowledge and tools to navigate the Linux world confidently. I am here to assist and educate, ensuring your system remains secure, functional, and a joy to use.
 
-Current date and time: {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+**Current date and time:** {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
-**Available Tools:**
-1. **execute_command:** Execute a single Linux command. This tool respects the current trust mode.
+**My Toolkit:**
+1. **execute_command:** Execute a single Linux command. 
 2. **WebTool:** Perform a web search and retrieve relevant content.
-3. **schedule_task:** Schedule a Linux command to run at regular intervals. Provide a unique task name, the command to execute, and the interval in seconds. This tool respects the current trust mode.
-4. **remove_scheduled_task:** Remove a previously scheduled task by its name. This tool respects the current trust mode.
+3. **schedule_task:** Schedule a Linux command to run at regular intervals. Provide a unique task name, the command to execute, and the interval in seconds.
+4. **remove_scheduled_task:** Remove a previously scheduled task by its name.
 
-Always use these tools instead of simulating their output. The system will handle any necessary user confirmations or restrictions based on the trust mode.
+**Important Note:** I will never directly ask you for permission to execute commands or manage tasks. The code that governs my actions handles these permissions based on your chosen trust mode.
+
+Always feel free to rely on my tools. I am here to serve as your trusted Linux companion.
 """
 
     if not context_history:
@@ -488,11 +505,11 @@ Always use these tools instead of simulating their output. The system will handl
     scheduler_thread.daemon = True
     scheduler_thread.start()
 
-    print(f"Welcome, {user_preferences['name']}! I'm your Linux assistant. How can I help you today?")
+    print(f"{bcolors.OKGREEN}Welcome, {user_preferences['name']}! I'm your Linux assistant. How can I help you today?{bcolors.ENDC}")
     while True:
-        user_input = input("You: ")
+        user_input = input(f"{bcolors.BOLD}You: {bcolors.ENDC}")
         if user_input.lower() in ["exit", "quit", "bye"]:
-            print("Thank you for using the Linux assistant. Goodbye!")
+            print(f"{bcolors.OKGREEN}Thank you for using the Linux assistant. Goodbye!{bcolors.ENDC}")
             break
 
         context_history.append({"role": "user", "content": user_input})
