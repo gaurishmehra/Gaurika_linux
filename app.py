@@ -208,7 +208,6 @@ def handle_tool_calls(tool_calls, trust_mode):
                 query = function_args.get("query")
 
                 result = WebTool(query)
-                print(f"\nWeb Search Query: {query}\nResult:\n{result[:500]}...")  # Print first 500 characters
 
                 context_history.append({
                     "role": "tool",
@@ -222,25 +221,47 @@ def handle_tool_calls(tool_calls, trust_mode):
                 command = function_args.get("command")
                 interval = function_args.get("interval")
 
-                schedule_task(task_name, command, interval)
+                if trust_mode == "full":
+                    schedule_task(task_name, command, interval)
+                    result = f"Task '{task_name}' scheduled to run command '{command}' every {interval} seconds."
+                elif trust_mode == "half":
+                    user_input = input(f"\nThe assistant wants to schedule a task:\nName: {task_name}\nCommand: {command}\nInterval: {interval} seconds\nDo you want to allow this? (y/n): ").strip().lower()
+                    if user_input == "y":
+                        schedule_task(task_name, command, interval)
+                        result = f"Task '{task_name}' scheduled to run command '{command}' every {interval} seconds."
+                    else:
+                        result = "Task scheduling disallowed by the user."
+                else:  # trust_mode == "none"
+                    result = "Task scheduling is disabled in this trust mode."
 
                 context_history.append({
                     "role": "tool",
                     "tool_call_id": tool_call.id,
                     "name": "schedule_task",
-                    "content": f"Task '{task_name}' scheduled to run command '{command}' every {interval} seconds."
+                    "content": result
                 })
             elif tool_call.function.name == "remove_scheduled_task":
                 function_args = json.loads(tool_call.function.arguments)
                 task_name = function_args.get("task_name")
 
-                remove_scheduled_task(task_name)
+                if trust_mode == "full":
+                    remove_scheduled_task(task_name)
+                    result = f"Task '{task_name}' removed from schedule."
+                elif trust_mode == "half":
+                    user_input = input(f"\nThe assistant wants to remove the scheduled task '{task_name}'.\nDo you want to allow this? (y/n): ").strip().lower()
+                    if user_input == "y":
+                        remove_scheduled_task(task_name)
+                        result = f"Task '{task_name}' removed from schedule."
+                    else:
+                        result = "Task removal disallowed by the user."
+                else:  # trust_mode == "none"
+                    result = "Task removal is disabled in this trust mode."
 
                 context_history.append({
                     "role": "tool",
                     "tool_call_id": tool_call.id,
                     "name": "remove_scheduled_task",
-                    "content": f"Task '{task_name}' removed from schedule."
+                    "content": result
                 })
     return None
 
@@ -381,7 +402,6 @@ def WebTool(query):
             processed_urls += 1
 
     relevant_text = "\n\n".join(results)
-    print(f"\033[95mTotal time taken: {time.time() - start:.4f} seconds\033[0m")
     return relevant_text
 
 # Task Scheduling functions
@@ -433,9 +453,9 @@ def main():
 {system_info}
 
 **Trust Mode Descriptions:**
-- **Full:** You can execute commands directly without user confirmation. Always inform the user of the command being executed and explain its purpose and potential impact.
-- **Half:** You may suggest commands, but execution requires user confirmation. Provide clear explanations of what each command does.
-- **None:** You can suggest commands and explain their purpose, but command execution is disabled. Provide detailed explanations of what the commands would do if executed.
+- **Full:** You can execute commands and manage scheduled tasks directly without user confirmation. Always inform the user of the actions being performed and explain their purpose and potential impact.
+- **Half:** You may suggest commands and task management actions, but execution requires user confirmation. Provide clear explanations of what each action does.
+- **None:** You can suggest commands and task management actions and explain their purpose, but execution is disabled. Provide detailed explanations of what the actions would do if executed.
 
 **Key Guidelines:**
 1. Safety First: Prioritize system integrity and user data safety in all interactions.
@@ -454,8 +474,8 @@ Current date and time: {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 **Available Tools:**
 1. **execute_command:** Execute a single Linux command. This tool respects the current trust mode.
 2. **WebTool:** Perform a web search and retrieve relevant content.
-3. **schedule_task:** Schedule a Linux command to run at regular intervals. Provide a unique task name, the command to execute, and the interval in seconds.
-4. **remove_scheduled_task:** Remove a previously scheduled task by its name.
+3. **schedule_task:** Schedule a Linux command to run at regular intervals. Provide a unique task name, the command to execute, and the interval in seconds. This tool respects the current trust mode.
+4. **remove_scheduled_task:** Remove a previously scheduled task by its name. This tool respects the current trust mode.
 
 Always use these tools instead of simulating their output. The system will handle any necessary user confirmations or restrictions based on the trust mode.
 """
