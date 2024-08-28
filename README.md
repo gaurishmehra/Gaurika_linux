@@ -25,7 +25,7 @@ Gaurika operates with three trust modes:
 
 1. **Prerequisites:**
    - Python 3.8 or higher
-   - OpenAI API key (from Groq)
+   - GROQ API key
    - `dotenv` package (for managing environment variables)
    - `requests`, `selectolax`, `concurrent.futures`, `urllib.parse`, `collections`, `socket`, `openai`, `json`, `subprocess`, `datetime`, `schedule`, `threading` packages
 
@@ -38,7 +38,7 @@ Gaurika operates with three trust modes:
      ```
 
 3. **Running Gaurika:**
-   - Run the `main.py` script: `python main.py`
+   - Run the `app.py` script: `python app.py` or `python3 app.py` depending on your Python installation.
    - Gaurika will prompt you for your name, Linux username, distribution, and trust mode if you haven't set them before.
    - Start interacting with Gaurika by typing your requests.
 
