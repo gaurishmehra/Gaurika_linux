@@ -285,11 +285,19 @@ def get_user_preferences(filename="user_pref.json"):
             else:
                 print(f"{bcolors.FAIL}Invalid trust mode. Please enter 'full', 'half', or 'none'.{bcolors.ENDC}")
 
+        while True:
+            communication_mode = input(f"{bcolors.OKCYAN}Enter your preferred communication mode (audio, text): {bcolors.ENDC}").strip().lower()
+            if communication_mode in ["audio", "text"]:
+                break
+            else:
+                print(f"{bcolors.FAIL}Invalid communication mode. Please enter 'audio' or 'text'.{bcolors.ENDC}")
+
         user_preferences = {
             "name": user_name,
             "linux_username": linux_username,
             "linux_distro": linux_distro,
-            "trust_mode": trust_mode
+            "trust_mode": trust_mode,
+            "communication": communication_mode
         }
 
         with open(filename, "w") as f:
@@ -461,11 +469,12 @@ def main():
     # Load or get user preferences
     user_preferences = get_user_preferences()
     trust_mode = user_preferences["trust_mode"]
+    communication_mode = user_preferences["communication"]
 
     # Get system information
     system_info = get_system_info()
 
-    # Update system prompt with user preferences, trust mode, system info, and tool descriptions
+    # Update system prompt with user preferences, trust mode, communication mode, system info, and tool descriptions
     system_message = f"""
 **Gaurika, Your Linux Companion**
 
@@ -477,6 +486,7 @@ Namaste! I am Gaurika, your ever-present Linux assistant, ready to guide you thr
 - Linux Distribution: {user_preferences['linux_distro']}
 
 **Trust Mode:** '{trust_mode}'
+**Communication Mode:** '{communication_mode}' 
 
 **System Information:**
 {system_info}
@@ -485,6 +495,10 @@ Namaste! I am Gaurika, your ever-present Linux assistant, ready to guide you thr
 - **Full:** I have full autonomy to execute commands and manage scheduled tasks without requiring your explicit confirmation. Rest assured, I will always inform you of the actions I take, explaining their purpose and potential impact.
 - **Half:** I will propose commands and task management actions, I will provide clear explanations of each action's implications. I will never ask for permission directly, as the code will handle this process.
 - **None:** I can offer suggestions and explanations for commands and task management actions, but I am unable to execute them. I will provide detailed insights into what these actions would entail if executed.
+
+**Communication Mode Descriptions:**
+- **Text:** You will communicate with me by typing text commands and I will respond with text output.
+- **Audio:** You will communicate with me using your voice (speech-to-text) and I will respond using synthesized speech (text-to-speech).
 
 My mission is to empower you with the knowledge and tools to navigate the Linux world confidently. I am here to assist and educate, ensuring your system remains secure, functional, and a joy to use.
 
@@ -512,20 +526,24 @@ I shall only make use of one tool at a time
     scheduler_thread.start()
 
     print(f"{bcolors.OKGREEN}Welcome, {user_preferences['name']}! I'm your Linux assistant. How can I help you today?{bcolors.ENDC}")
-    speak(f"Welcome, {user_preferences['name']}! I'm your Linux assistant. How can I help you today?")
+    if communication_mode == "audio":
+        speak(f"Welcome, {user_preferences['name']}! I'm your Linux assistant. How can I help you today?")
 
     while True:
-        print(f"{bcolors.BOLD}You: {bcolors.ENDC}", end="", flush=True)
-        user_input = listen()
-        
-        if user_input is None:
-            print(f"{bcolors.WARNING}Sorry, I couldn't hear you. Could you please repeat?{bcolors.ENDC}")
-            speak("Sorry, I couldn't hear you. Could you please repeat?")
-            continue
+        if communication_mode == "audio":
+            print(f"{bcolors.BOLD}You: {bcolors.ENDC}", end="", flush=True)
+            user_input = listen()
+            if user_input is None:
+                print(f"{bcolors.WARNING}Sorry, I couldn't hear you. Could you please repeat?{bcolors.ENDC}")
+                speak("Sorry, I couldn't hear you. Could you please repeat?")
+                continue
+        else:
+            user_input = input(f"{bcolors.BOLD}You: {bcolors.ENDC}")
 
         if user_input.lower() in ["exit", "quit", "bye"]:
             print(f"{bcolors.OKGREEN}Thank you for using the Linux assistant. Goodbye!{bcolors.ENDC}")
-            speak("Thank you for using the Linux assistant. Goodbye!")
+            if communication_mode == "audio":
+                speak("Thank you for using the Linux assistant. Goodbye!")
             break
 
         context_history.append({"role": "user", "content": user_input})
@@ -548,7 +566,8 @@ I shall only make use of one tool at a time
 
         context_history.append({"role": "assistant", "content": assistant_response})
         print(f"{bcolors.OKCYAN}Time taken: {time.time() - start:.2f} seconds{bcolors.ENDC}")
-        speak(assistant_response)
+        if communication_mode == "audio":
+            speak(assistant_response)
         save_context_history(context_history)
 
 if __name__ == "__main__":
