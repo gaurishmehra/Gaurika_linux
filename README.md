@@ -12,7 +12,7 @@ Gaurika is an AI-powered Linux assistant designed to make your Linux experience 
 - **User Preferences:** Customize Gaurika by setting your preferred name, Linux username, distribution, trust mode, and interaction style (text or voice).
 - **Command History:** Keep track of the commands you've executed and their outputs.
 - **Color-Coded Output:** Enjoy a more visually appealing and easier-to-understand output.
-- **Voice Interaction:** Communicate with Gaurika using your voice thanks to seamless integration with speech-to-text and text-to-speech engines.
+- **Voice Interaction:** Communicate with Gaurika using your voice thanks to seamless integration with speech-to-text (powered by Groq) and text-to-speech engines.
 
 ## Trust Modes
 
@@ -26,16 +26,18 @@ Gaurika operates with three trust modes to ensure you're always in control:
 
 1. **Prerequisites:**
    - Python 3.8 or higher
-   - Groq API key (get yours at [Groq website])
+   - **Groq API key** (get yours at [Groq website] - for Speech-to-Text)
+   - **Cerebras API key** (get yours at [Cerebras website] - for main inference)
    - `dotenv` package (for managing environment variables)
    - `requests`, `selectolax`, `concurrent.futures`, `urllib.parse`, `collections`, `socket`, `openai`, `json`, `subprocess`, `datetime`, `schedule`, `threading`, `speech_recognition`, `pyttsx3` packages 
 
 2. **Installation:**
    - Clone this repository: `git clone https://github.com/gaurishmehra/gaurika.git`
    - Install the required packages: `pip install -r requirements.txt`
-   - Create a `.env` file in the root directory and add your Groq API key:
+   - Create a `.env` file in the root directory and add your API keys:
      ```
-     GROQ_API_KEY=your_groq_api_key
+     GROQ_API_KEY=your_groq_api_key 
+     CEREBRAS_API_KEY=your_cerebras_api_key
      ```
 
 3. **Running Gaurika:**
