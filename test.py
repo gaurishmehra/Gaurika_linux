@@ -17,26 +17,25 @@ import threading
 import google.generativeai as genai
 from markdownify import markdownify as md
 import hashlib
-from langchain_core.output_parsers import JsonOutputParser
 
 from langchain.text_splitter import MarkdownHeaderTextSplitter
 from langchain_cohere import CohereEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain.chains import LLMChain
-from langchain.prompts import PromptTemplate
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_retrieval_chain
 from langchain import hub
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from langchain_google_genai import ChatGoogleGenerativeAI
-
+import shutil
 # Load environment variables from .env file
 load_dotenv()
 Cre = os.getenv("CRE_API_KEY")
 Cre_base_url = "https://api.cerebras.ai/v1"
 genai.configure(api_key=os.getenv('GEM'))
 cohere_key = os.getenv("COHERE_API_KEY")
+cse_api_key = os.getenv('CSE_API_KEY')
+search_engine_id = os.getenv('SEARCH_ENGINE_ID')
 
 embeddings_model = CohereEmbeddings(cohere_api_key=cohere_key)
 # Set a global socket timeout
@@ -414,11 +413,23 @@ def save_result_as_markdown(url, result):
     # Convert result to markdown and save it
     with open(filepath, 'w') as file:
         file.write(md(str(soup)))
+def delete_all_files_in_folder(folder_path):
+    for filename in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print(f'Failed to delete {file_path}. Reason: {e}')
 
 def WebTool(query):
+    os.makedirs('markdown', exist_ok=True)
+    delete_all_files_in_folder('markdown')
     api_key = "AIzaSyBoCNgf7zyxkWdhJ43-PSP5dRPbrV9U72c"
     search_engine_id = "93eb093bb82b44a24"
-    url = f"https://www.googleapis.com/customsearch/v1?key={api_key}&cx={search_engine_id}&q={query}"
+    url = f"https://www.googleapis.com/customsearch/v1?key={cse_api_key}&cx={search_engine_id}&q={query}"
     response = requests.get(url)
     urls = []
 
@@ -447,7 +458,6 @@ def WebTool(query):
 
     session = requests.Session()
     max_workers = 100
-    os.makedirs('markdown', exist_ok=True)
 
 
     with ThreadPoolExecutor(max_workers=max_workers) as fetch_executor:

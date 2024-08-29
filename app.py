@@ -16,13 +16,29 @@ import schedule
 import threading
 import google.generativeai as genai
 from voice import listen, speak
+from markdownify import markdownify as md
+import hashlib
 
+from langchain.text_splitter import MarkdownHeaderTextSplitter
+from langchain_cohere import CohereEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains import create_retrieval_chain
+from langchain import hub
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
+from langchain_google_genai import ChatGoogleGenerativeAI
+import shutil
 # Load environment variables from .env file
 load_dotenv()
 Cre = os.getenv("CRE_API_KEY")
 Cre_base_url = "https://api.cerebras.ai/v1"
 genai.configure(api_key=os.getenv('GEM'))
+cohere_key = os.getenv("COHERE_API_KEY")
+cse_api_key = os.getenv('CSE_API_KEY')
+search_engine_id = os.getenv('SEARCH_ENGINE_ID')
 
+embeddings_model = CohereEmbeddings(cohere_api_key=cohere_key)
 # Set a global socket timeout
 socket.setdefaulttimeout(1)
 
@@ -384,13 +400,61 @@ def process_url(session, url):
     html_content = fetch_url(session, url)
     if not html_content:
         return ""
-    extracted_content = extract_content(html_content)
-    cleaned_content = clean_content(extracted_content)
-    return f"[URL]:\n{url}\n\n[Content]:\n{cleaned_content}\n\n"
+    
+    cleaned_content = clean_content(html_content)
+    return f"{cleaned_content}"
+
+def save_result_as_markdown(url, result):
+    url_hash = hashlib.md5(url.encode()).hexdigest()
+    # Use the hash as the filename
+    filename = f"{url_hash}.md"
+    # Ensure the markdown directory exists
+    os.makedirs('markdown', exist_ok=True)
+    # Define the full path
+    filepath = os.path.join('markdown', filename)
+    # Parse the HTML content using BeautifulSoup
+    soup = BeautifulSoup(result, 'html.parser')
+    
+    # Fix relative URLs
+    for a in soup.find_all('a', href=True):
+        a['href'] = urljoin(url, a['href'])
+    
+    # Convert result to markdown and save it
+    with open(filepath, 'w') as file:
+        file.write(md(str(soup)))
+def delete_all_files_in_folder(folder_path):
+    for filename in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print(f'Failed to delete {file_path}. Reason: {e}')
 
 def WebTool(query):
-    urls = google_search(query, num_results=10)
+    os.makedirs('markdown', exist_ok=True)
+    delete_all_files_in_folder('markdown')
+    url = f"https://www.googleapis.com/customsearch/v1?key={cse_api_key}&cx={search_engine_id}&q={query}"
+    response = requests.get(url)
+    urls = []
 
+    if response.status_code == 200:
+        # Process the response
+        data = response.json()
+        # Extract URLs from the search results
+        if 'items' in data:
+            for item in data['items']:
+                if 'link' in item:
+                    urls.append(item['link'])
+                # Break the loop if we have collected 4 URLs
+                if len(urls) >= 5:
+                    break
+        # Print the URLs for verification
+        print(urls)
+    else:
+        print(f"Error: {response.status_code}")
     if not urls:
         print("No URLs found.")
         return "", []
@@ -402,11 +466,13 @@ def WebTool(query):
     session = requests.Session()
     max_workers = 100
 
+
     with ThreadPoolExecutor(max_workers=max_workers) as fetch_executor:
         future_to_url = {fetch_executor.submit(process_url, session, url): url for url in urls}
         for future in as_completed(future_to_url):
             url = future_to_url[future]
             result = future.result()
+            save_result_as_markdown(url, result)
             if result:
                 results.append(result)
                 successful_urls.append(url)
@@ -416,27 +482,75 @@ def WebTool(query):
     # print the number of scrapped words
     print("Words Scrapped : " + str(len(relevant_text.split())))
 
-    safety_settings = [
-        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-    ]
-    generation_config = {
-        "temperature": 0,
-        "top_p": 0.95,
-        "top_k": 64,
-        "max_output_tokens": 1024,
-        "response_mime_type": "text/plain",
-    }
-    gemini = genai.GenerativeModel(
-        model_name="gemini-1.5-flash-exp-0827",
-        safety_settings=safety_settings,
-        generation_config=generation_config,
-        system_instruction="You are a llm working with another llm.. so please provide results in a way that are helpfull to the llm not a human"
+    markdown_folder = 'markdown'
+    headers_to_split_on = [("#", "Header 1"), ("##", "Header 2"), ("###", "Header 3"), ("####", "Header 4")]
+    markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
+
+    # Function to load and split markdown files
+    def load_and_split_markdown_files(folder_path):
+        all_splits = []
+        for filename in os.listdir(folder_path):
+            if filename.endswith('.md'):
+                file_path = os.path.join(folder_path, filename)
+                with open(file_path, 'r', encoding='utf-8') as file:
+                    content = file.read()
+                    # Split the content using the headers
+                    md_header_splits = markdown_splitter.split_text(content)
+                    all_splits.extend(md_header_splits)
+        return all_splits
+
+    # Load and split markdown files
+    md_header_splits = load_and_split_markdown_files(markdown_folder)
+
+    retriever = FAISS.from_documents(
+        md_header_splits, CohereEmbeddings(model="embed-english-v3.0")
+    ).as_retriever(search_kwargs={"k": 10})
+
+    query = "LangChain text generation"
+
+    # Initialize the retriever (assuming it's already defined)
+    retriever = FAISS.from_documents(
+        md_header_splits, CohereEmbeddings(model="embed-english-v3.0")
+    ).as_retriever(search_kwargs={"k": 10})
+
+    # Initialize the LLM (e.g., OpenAI's GPT-3)
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-1.5-flash",
+        temperature=0.2,
+        max_tokens=None,
+        verbose=True,
     )
-    gemini_use = f"Here is some scraped data:\n\n{relevant_text}\nNow based on this, please answer the following in as much detail as possible: {query}"
-    return gemini.generate_content(gemini_use).text
+    
+    retrieval_qa_chat_prompt = hub.pull("langchain-ai/retrieval-qa-chat")
+    combine_docs_chain = create_stuff_documents_chain(
+        llm, retrieval_qa_chat_prompt
+    )
+    retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)
+    result = retrieval_chain.invoke({"input": query, "max_tokens": 1024})
+    
+    return result['answer']
+    #safety_settings = [
+    #    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+    #    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+    #    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+    #    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+    #]
+    #generation_config = {
+    #    "temperature": 0,
+    #    "top_p": 0.95,
+    #    "top_k": 64,
+    #    "max_output_tokens": 1024,
+    #    "response_mime_type": "text/plain",
+    #}
+    #gemini = genai.GenerativeModel(
+    #    model_name="gemini-1.5-flash-exp-0827",
+    #    safety_settings=safety_settings,
+    #    generation_config=generation_config,
+    #    system_instruction="You are a llm working with another llm.. so please provide results in a way that are helpfull to the llm not a human"
+    #)
+    #gemini_use = f"Here is some scraped data:\n\n{relevant_text}\nNow based on this, please answer the following in as much detail as possible: {query}"
+    #return gemini.generate_content(gemini_use).text
+
 
 # Task Scheduling functions
 def run_scheduled_tasks():
