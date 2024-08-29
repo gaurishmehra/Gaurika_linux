@@ -2,4 +2,5 @@
 context_history.json
 user_pref.json
 command_history.txt
-__pycache__/
+gaurika/
+markdown/
