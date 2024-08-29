@@ -36,9 +36,13 @@ Gaurika operates with three trust modes to ensure you're always in control:
    - Install the required packages manually (there is no requirements.txt file)
    - Create a `.env` file in the root directory and add your API keys:
      ```
-     CEREBRAS_API_KEY=your_cerebras_api_key
+     CRE_API_KEY=your_cerebras_api_key
      GROQ_API_KEY=your_groq_api_key (if using voice interaction)
-     GEMINI_API_KEY=your_gemini_api_key
+     GEM=your_gemini_api_key
+     GOOGLE_API_KEY=....
+      LANGSMITH_API_KEY=...
+      CSE_API_KEY=...
+      SEARCH_ENGINE_ID=...
      ```
 
 3. **Running Gaurika:**
