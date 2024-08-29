@@ -26,18 +26,19 @@ Gaurika operates with three trust modes to ensure you're always in control:
 
 1. **Prerequisites:**
    - Python 3.8 or higher
-   - **Groq API key** (get yours at [Groq website] - for Speech-to-Text)
    - **Cerebras API key** (get yours at [Cerebras website] - for main inference)
-   - `dotenv` package (for managing environment variables)
-   - `requests`, `selectolax`, `concurrent.futures`, `urllib.parse`, `collections`, `socket`, `openai`, `json`, `subprocess`, `datetime`, `schedule`, `threading`, `speech_recognition`, `pyttsx3` packages 
+   - **Groq API key** (get yours at [Groq website] - only needed for voice interaction)
+   - **Gemini API key** (for RAG functionality in the WebTool)
+   - Required Python packages: `dotenv`, `requests`, `selectolax`, `concurrent.futures`, `urllib.parse`, `collections`, `socket`, `openai`, `json`, `subprocess`, `datetime`, `schedule`, `threading`, `speech_recognition`, `pyttsx3`
 
 2. **Installation:**
-   - Clone this repository: `git clone https://github.com/gaurishmehra/gaurika.git`
-   - Install the required packages: `pip install -r requirements.txt`
+   - Clone this repository: `git clone https://github.com/gaurishmehra/Gaurika_linux.git`
+   - Install the required packages manually (there is no requirements.txt file)
    - Create a `.env` file in the root directory and add your API keys:
      ```
-     GROQ_API_KEY=your_groq_api_key 
      CEREBRAS_API_KEY=your_cerebras_api_key
+     GROQ_API_KEY=your_groq_api_key (if using voice interaction)
+     GEMINI_API_KEY=your_gemini_api_key
      ```
 
 3. **Running Gaurika:**
@@ -53,7 +54,7 @@ Gaurika operates with three trust modes to ensure you're always in control:
   - `execute_command: ls -l` (in full trust mode)
   - `Can you list the files in the current directory?` (Gaurika might suggest `ls -l` and ask for confirmation in half trust mode)
 - **Perform a web search:**
-  - `WebTool: hey.. what's up with the new llama 3.1 405b model?`
+  - `WebTool: What's new in the latest Linux kernel release?`
 - **Schedule a task:**
   - `schedule_task: backup_files, cp -r /home/user/Documents /home/user/Backups, 3600` (schedule a backup every hour)
 - **Remove a scheduled task:**
@@ -68,10 +69,14 @@ Gaurika operates with three trust modes to ensure you're always in control:
 - **Schedule a task:**
   - "Gaurika, schedule a task to clean up my downloads folder every week."
 
-
 ## Disclaimer
 
 Gaurika is a powerful tool, and it's important to use it responsibly, especially in full trust mode. Always be mindful of the commands you execute or approve. 
+
+## Project Information
+
+- **Authors:** Gaurish Mehra and Gunit Kumar
+- **Development Time:** This project was conceptualized and developed within a day, with most of the actual coding done in just a few hours.
 
 ## Contributing
 
@@ -79,4 +84,4 @@ Contributions are welcome! Please feel free to open issues or submit pull reques
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for details. 
+This project is licensed under the MIT License. See the LICENSE file for details.
