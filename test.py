@@ -510,14 +510,8 @@ def WebTool(query):
     )
     retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)
     result = retrieval_chain.invoke({"input": query, "max_tokens": 1024})
-    print(result)
-    result_str = json.dumps(result, indent=4)
     
-    # Save the result to a Markdown file
-    with open("result.md", "w") as file:
-        file.write(result_str)
-    
-    print("Result saved to result.md")
+    return result['answer']
     #safety_settings = [
     #    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
     #    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
@@ -565,7 +559,6 @@ def remove_scheduled_task(task_name):
         print(f"{bcolors.WARNING}No task named '{task_name}' found in the schedule{bcolors.ENDC}")
 
 def main():
-    WebTool("LangChain text generation")
     global context_history 
     context_history = load_context_history()
 
