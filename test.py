@@ -17,10 +17,19 @@ import threading
 import google.generativeai as genai
 from markdownify import markdownify as md
 import hashlib
+from langchain_core.output_parsers import JsonOutputParser
+
 from langchain.text_splitter import MarkdownHeaderTextSplitter
 from langchain_cohere import CohereEmbeddings
 from langchain_community.vectorstores import FAISS
-
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains import create_retrieval_chain
+from langchain import hub
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 # Load environment variables from .env file
 load_dotenv()
@@ -28,6 +37,7 @@ Cre = os.getenv("CRE_API_KEY")
 Cre_base_url = "https://api.cerebras.ai/v1"
 genai.configure(api_key=os.getenv('GEM'))
 cohere_key = os.getenv("COHERE_API_KEY")
+
 embeddings_model = CohereEmbeddings(cohere_api_key=cohere_key)
 # Set a global socket timeout
 socket.setdefaulttimeout(1)
@@ -384,7 +394,7 @@ def process_url(session, url):
         return ""
     
     cleaned_content = clean_content(html_content)
-    return f"[URL]:\n{url}\n\n[Content]:\n{cleaned_content}\n\n"
+    return f"{cleaned_content}"
 
 def save_result_as_markdown(url, result):
     url_hash = hashlib.md5(url.encode()).hexdigest()
@@ -394,9 +404,16 @@ def save_result_as_markdown(url, result):
     os.makedirs('markdown', exist_ok=True)
     # Define the full path
     filepath = os.path.join('markdown', filename)
+    # Parse the HTML content using BeautifulSoup
+    soup = BeautifulSoup(result, 'html.parser')
+    
+    # Fix relative URLs
+    for a in soup.find_all('a', href=True):
+        a['href'] = urljoin(url, a['href'])
+    
     # Convert result to markdown and save it
     with open(filepath, 'w') as file:
-        file.write(md(result))
+        file.write(md(str(soup)))
 
 def WebTool(query):
     api_key = "AIzaSyBoCNgf7zyxkWdhJ43-PSP5dRPbrV9U72c"
@@ -414,7 +431,7 @@ def WebTool(query):
                 if 'link' in item:
                     urls.append(item['link'])
                 # Break the loop if we have collected 4 URLs
-                if len(urls) >= 4:
+                if len(urls) >= 5:
                     break
         # Print the URLs for verification
         print(urls)
@@ -470,12 +487,37 @@ def WebTool(query):
 
     retriever = FAISS.from_documents(
         md_header_splits, CohereEmbeddings(model="embed-english-v3.0")
-    ).as_retriever(search_kwargs={"k": 1})
+    ).as_retriever(search_kwargs={"k": 10})
 
     query = "LangChain text generation"
-    docs = retriever.invoke(query)
 
+    # Initialize the retriever (assuming it's already defined)
+    retriever = FAISS.from_documents(
+        md_header_splits, CohereEmbeddings(model="embed-english-v3.0")
+    ).as_retriever(search_kwargs={"k": 10})
 
+    # Initialize the LLM (e.g., OpenAI's GPT-3)
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-1.5-flash",
+        temperature=0.2,
+        max_tokens=None,
+        verbose=True,
+    )
+    
+    retrieval_qa_chat_prompt = hub.pull("langchain-ai/retrieval-qa-chat")
+    combine_docs_chain = create_stuff_documents_chain(
+        llm, retrieval_qa_chat_prompt
+    )
+    retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)
+    result = retrieval_chain.invoke({"input": query, "max_tokens": 1024})
+    print(result)
+    result_str = json.dumps(result, indent=4)
+    
+    # Save the result to a Markdown file
+    with open("result.md", "w") as file:
+        file.write(result_str)
+    
+    print("Result saved to result.md")
     #safety_settings = [
     #    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
     #    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
