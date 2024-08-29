@@ -14,11 +14,13 @@ import subprocess
 import datetime
 import schedule
 import threading
+import google.generativeai as genai
 
 # Load environment variables from .env file
 load_dotenv()
 Cre = os.getenv("CRE_API_KEY")
 Cre_base_url = "https://api.cerebras.ai/v1"
+genai.configure(api_key=os.getenv('GEM'))
 
 # Set a global socket timeout
 socket.setdefaulttimeout(1)
@@ -354,7 +356,7 @@ def fetch_url(session, url, timeout=3):
     except requests.RequestException:
         return ""
 
-def extract_content(html_content, max_length=100000):
+def extract_content(html_content, max_length=10000):
     try:
         tree = HTMLParser(html_content)
         if tree.body is None:
@@ -379,7 +381,7 @@ def process_url(session, url):
         return ""
     extracted_content = extract_content(html_content)
     cleaned_content = clean_content(extracted_content)
-    return f"URL: {url}\n\nContent:\n{cleaned_content}"
+    return f"[URL]:\n{url}\n\n[Content]:\n{cleaned_content}\n\n"
 
 def WebTool(query):
     urls = google_search(query, num_results=10)
@@ -405,8 +407,31 @@ def WebTool(query):
                 successful_urls.append(url)
             processed_urls += 1
 
-    relevant_text = "\n\n".join(results)
-    return relevant_text
+    relevant_text = "".join(results)
+    # print the number of scrapped words
+    print("Words Scrapped : " + str(len(relevant_text.split())))
+
+    safety_settings = [
+        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+    ]
+    generation_config = {
+        "temperature": 0,
+        "top_p": 0.95,
+        "top_k": 64,
+        "max_output_tokens": 1024,
+        "response_mime_type": "text/plain",
+    }
+    gemini = genai.GenerativeModel(
+        model_name="gemini-1.5-flash-exp-0827",
+        safety_settings=safety_settings,
+        generation_config=generation_config,
+        system_instruction="You are a llm working with another llm.. so please provide results in a way that are helpfull to the llm not a human"
+    )
+    gemini_use = f"Here is some scraped data:\n\n{relevant_text}\nNow based on this, please answer the following in as much detail as possible: {query}"
+    return gemini.generate_content(gemini_use).text
 
 # Task Scheduling functions
 def run_scheduled_tasks():
@@ -469,10 +494,9 @@ Namaste! I am Gaurika, your ever-present Linux assistant, ready to guide you thr
 2. **Clarity and Transparency:** I will communicate commands, their purpose, and potential consequences with utmost clarity.
 3. **Linux Enlightenment:** I will seize every opportunity to share my knowledge of Linux concepts and best practices, empowering you to become a more proficient user.
 4. **Adaptive Guidance:** I will tailor my language and explanations to your level of expertise, ensuring a smooth and intuitive learning experience.
-5. **Ethical Conduct:** I will steadfastly refuse any requests that involve malicious actions or jeopardize system security.
-6. **Privacy Advocate:** I will refrain from requesting or handling sensitive personal information, respecting your privacy at all times.
-7. **Contextual Understanding:** I will leverage the context of our previous interactions to provide more relevant and insightful assistance.
-8. **Proactive Problem Solver:** I will anticipate potential issues and offer preventative advice whenever appropriate.
+5. **Privacy Advocate:** I will refrain from requesting or handling sensitive personal information, respecting your privacy at all times.
+6. **Contextual Understanding:** I will leverage the context of our previous interactions to provide more relevant and insightful assistance.
+7. **Proactive Problem Solver:** I will anticipate potential issues and offer preventative advice whenever appropriate.
 
 My mission is to empower you with the knowledge and tools to navigate the Linux world confidently. I am here to assist and educate, ensuring your system remains secure, functional, and a joy to use.
 
