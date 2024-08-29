@@ -25,16 +25,16 @@ Gaurika operates with three trust modes:
 
 1. **Prerequisites:**
    - Python 3.8 or higher
-   - GROQ API key
+   - cerebras API key
    - `dotenv` package (for managing environment variables)
    - `requests`, `selectolax`, `concurrent.futures`, `urllib.parse`, `collections`, `socket`, `openai`, `json`, `subprocess`, `datetime`, `schedule`, `threading` packages
 
 2. **Installation:**
    - Clone this repository: `git clone https://github.com/gaurishmehra/gaurika.git`
    - Install the required packages: `pip install -r requirements.txt`
-   - Create a `.env` file in the root directory and add your Groq API key:
+   - Create a `.env` file in the root directory and add your cerebras API key:
      ```
-     GROQ_API_KEY=your_groq_api_key
+     cerebras_API_KEY=your_cerebras_api_key
      ```
 
 3. **Running Gaurika:**
