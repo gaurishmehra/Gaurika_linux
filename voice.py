@@ -6,10 +6,8 @@ import threading
 import pyaudio
 import wave
 from groq import Groq
-import time
-from dotenv import load_dotenv
-import wave
 import logging
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -20,14 +18,14 @@ def listen():
     client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
     # Audio recording parameters
-    CHUNK = 1024
+    CHUNK = 4096  # Increased chunk size for faster processing
     FORMAT = pyaudio.paInt16
     CHANNELS = 1
     RATE = 44100
 
     recording = False
     frames = []
-    transcription_text = ""  # Variable to store the transcription
+    transcription_text = ""
 
     def record_audio():
         nonlocal frames
@@ -49,20 +47,19 @@ def listen():
 
         # Save the recorded audio to a file
         filename = "recorded_audio.wav"
-        wf = wave.open(filename, 'wb')
-        wf.setnchannels(CHANNELS)
-        wf.setsampwidth(p.get_sample_size(FORMAT))
-        wf.setframerate(RATE)
-        wf.writeframes(b''.join(frames))
-        wf.close()
+        with wave.open(filename, 'wb') as wf:
+            wf.setnchannels(CHANNELS)
+            wf.setsampwidth(p.get_sample_size(FORMAT))
+            wf.setframerate(RATE)
+            wf.writeframes(b''.join(frames))
 
         return filename
 
     def transcribe_audio(filename):
-        nonlocal transcription_text  # Access the outer scope variable
+        nonlocal transcription_text
         with open(filename, "rb") as file:
             transcription = client.audio.transcriptions.create(
-                file=(filename, file.read()),
+                file=(filename, file),
                 model="whisper-large-v3",
                 prompt="Specify context or spelling",
                 response_format="json",
@@ -73,7 +70,7 @@ def listen():
 
         # Clean up the temporary audio file
         os.remove(filename)
-        transcription_text = transcription.text.strip()  # Store the transcription without extra newlines
+        transcription_text = transcription.text.strip()
         return transcription_text
 
     def wait_for_input():
@@ -109,25 +106,25 @@ def listen():
 
     return transcription_text
 
-
 def generate_audio(message: str, voice: str = "Salli"):
-    url: str = f"https://api.streamelements.com/kappa/v2/speech?voice={voice}&text={{{message}}}"
+    url = f"https://api.streamelements.com/kappa/v2/speech?voice={voice}&text={{{message}}}"
     headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'}
     try:
-        result = requests.get(url=url, headers=headers)
-        return result.content
-    except:
+        return requests.get(url=url, headers=headers).content
+    except Exception as e:
+        print(f"Error generating audio: {e}")
         return None
-
 
 def speak(message: str, folder: str = "", extension: str = ".mp3") -> Union[None, str]:
     try:
         result_content = generate_audio(message)
-        file_path = os.path.join(folder, f"Audio{extension}")
-        with open(file_path, "wb") as file:
-            file.write(result_content)
-        playsound.playsound(file_path, "wb")
-        os.remove(file_path)
+        if result_content:
+            file_path = os.path.join(folder, f"Audio{extension}")
+            with open(file_path, "wb") as file:
+                file.write(result_content)
+            playsound.playsound(file_path)
+            os.remove(file_path)
         return None
     except Exception as e:
-        return "Error playing TTS: " + str(e)
+        return f"Error playing TTS: {str(e)}"
+    
