@@ -5,3 +5,4 @@ command_history.txt
 gaurika/
 markdown/
 docs/
+__pycache__/
