@@ -5,7 +5,7 @@ Gaurika is an AI-powered Linux assistant designed to make your Linux experience 
 ## Features
 
 - **Command Execution:** Execute Linux commands easily. Gaurika offers three trust modes (full, half, none) to control how much autonomy you give it. 
-- **Web Search:** Get answers to your questions quickly using the integrated WebTool, powered by the Cerebras API.
+- **Web Search:** Get answers to your questions quickly using the integrated WebTool, powered by the Cerebras API and Google Custom Search Engine.
 - **Task Scheduling:** Automate routine tasks by scheduling Linux commands to run at specific intervals.
 - **Contextual Awareness:** Gaurika remembers your past interactions, allowing for more relevant and helpful responses.
 - **System Information:** Get a quick overview of your system's specifications (OS, kernel, CPU, memory).
@@ -29,7 +29,9 @@ Gaurika operates with three trust modes to ensure you're always in control:
    - **Cerebras API key** (get yours at [Cerebras website] - for main inference)
    - **Groq API key** (get yours at [Groq website] - only needed for voice interaction)
    - **Gemini API key** (for RAG functionality in the WebTool)
-   - Required Python packages: `dotenv`, `requests`, `selectolax`, `concurrent.futures`, `urllib.parse`, `collections`, `socket`, `openai`, `json`, `subprocess`, `datetime`, `schedule`, `threading`, `speech_recognition`, `pyttsx3` (and many more look at the code and install the deps lol )
+   - **Google API key and Custom Search Engine ID** (for web search functionality)
+   - **LangSmith API key** (for additional functionality)
+   - Required Python packages: `dotenv`, `requests`, `selectolax`, `concurrent.futures`, `urllib.parse`, `collections`, `socket`, `openai`, `json`, `subprocess`, `datetime`, `schedule`, `threading`, `speech_recognition`, `pyttsx3` (and many more - please refer to the code and install all necessary dependencies)
 
 2. **Installation:**
    - Clone this repository: `git clone https://github.com/gaurishmehra/Gaurika_linux.git`
@@ -39,10 +41,10 @@ Gaurika operates with three trust modes to ensure you're always in control:
      CRE_API_KEY=your_cerebras_api_key
      GROQ_API_KEY=your_groq_api_key (if using voice interaction)
      GEM=your_gemini_api_key
-     GOOGLE_API_KEY=....
-      LANGSMITH_API_KEY=...
-      CSE_API_KEY=...
-      SEARCH_ENGINE_ID=...
+     GOOGLE_API_KEY=your_google_api_key
+     LANGSMITH_API_KEY=your_langsmith_api_key
+     CSE_API_KEY=your_custom_search_engine_api_key
+     SEARCH_ENGINE_ID=your_search_engine_id
      ```
 
 3. **Running Gaurika:**
