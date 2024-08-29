@@ -29,7 +29,7 @@ Gaurika operates with three trust modes to ensure you're always in control:
    - **Cerebras API key** (get yours at [Cerebras website] - for main inference)
    - **Groq API key** (get yours at [Groq website] - only needed for voice interaction)
    - **Gemini API key** (for RAG functionality in the WebTool)
-   - Required Python packages: `dotenv`, `requests`, `selectolax`, `concurrent.futures`, `urllib.parse`, `collections`, `socket`, `openai`, `json`, `subprocess`, `datetime`, `schedule`, `threading`, `speech_recognition`, `pyttsx3`
+   - Required Python packages: `dotenv`, `requests`, `selectolax`, `concurrent.futures`, `urllib.parse`, `collections`, `socket`, `openai`, `json`, `subprocess`, `datetime`, `schedule`, `threading`, `speech_recognition`, `pyttsx3` (and many more look at the code and install the deps lol )
 
 2. **Installation:**
    - Clone this repository: `git clone https://github.com/gaurishmehra/Gaurika_linux.git`
