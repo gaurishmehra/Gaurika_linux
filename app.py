@@ -15,6 +15,7 @@ import datetime
 import schedule
 import threading
 import google.generativeai as genai
+from voice import listen, speak
 
 # Load environment variables from .env file
 load_dotenv()
@@ -511,10 +512,20 @@ I shall only make use of one tool at a time
     scheduler_thread.start()
 
     print(f"{bcolors.OKGREEN}Welcome, {user_preferences['name']}! I'm your Linux assistant. How can I help you today?{bcolors.ENDC}")
+    speak(f"Welcome, {user_preferences['name']}! I'm your Linux assistant. How can I help you today?")
+
     while True:
-        user_input = input(f"{bcolors.BOLD}You: {bcolors.ENDC}")
+        print(f"{bcolors.BOLD}You: {bcolors.ENDC}", end="", flush=True)
+        user_input = listen()
+        
+        if user_input is None:
+            print(f"{bcolors.WARNING}Sorry, I couldn't hear you. Could you please repeat?{bcolors.ENDC}")
+            speak("Sorry, I couldn't hear you. Could you please repeat?")
+            continue
+
         if user_input.lower() in ["exit", "quit", "bye"]:
             print(f"{bcolors.OKGREEN}Thank you for using the Linux assistant. Goodbye!{bcolors.ENDC}")
+            speak("Thank you for using the Linux assistant. Goodbye!")
             break
 
         context_history.append({"role": "user", "content": user_input})
@@ -522,27 +533,22 @@ I shall only make use of one tool at a time
 
         assistant_response, tool_calls = chat(context_history) 
 
-        # Ensure assistant_response is a string, even if it's None
         assistant_response = assistant_response or ""
 
         webtool_result = handle_tool_calls(tool_calls, trust_mode)
 
-        # If WebTool was called, use its result as the final response
         if webtool_result:
             assistant_response = webtool_result
             print(f"{bcolors.OKBLUE}{assistant_response}{bcolors.ENDC}")
 
-        # Get a follow-up response from the assistant after tool execution (excluding WebTool)
         if tool_calls and not webtool_result: 
             follow_up_response, _ = chat(context_history, tool_choice="none")
-            # Ensure follow_up_response is a string, even if it's empty
             follow_up_response = follow_up_response or ""
             assistant_response += "\n" + follow_up_response
 
         context_history.append({"role": "assistant", "content": assistant_response})
-        # print the time taken
         print(f"{bcolors.OKCYAN}Time taken: {time.time() - start:.2f} seconds{bcolors.ENDC}")
-
+        speak(assistant_response)
         save_context_history(context_history)
 
 if __name__ == "__main__":
