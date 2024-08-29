@@ -4,3 +4,5 @@ user_pref.json
 command_history.txt
 gaurika/
 markdown/
+docs/
+__pycache__/
