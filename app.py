@@ -17,8 +17,8 @@ import threading
 
 # Load environment variables from .env file
 load_dotenv()
-Groq = os.getenv("GROQ_API_KEY")
-Groq_base_url = "https://api.groq.com/openai/v1"
+Cre = os.getenv("CRE_API_KEY")
+Cre_base_url = "https://api.cerebras.ai/v1"
 
 # Set a global socket timeout
 socket.setdefaulttimeout(1)
@@ -104,7 +104,7 @@ tools = [
 ]
 
 # Initialize OpenAI client
-client = OpenAI(api_key=Groq, base_url=Groq_base_url)
+client = OpenAI(api_key=Cre, base_url=Cre_base_url)
 
 # Global variables
 context_history = []
@@ -163,29 +163,21 @@ def get_system_info():
     info['Memory'] = subprocess.check_output('free -h | awk \'/^Mem:/ {print $2}\'', shell=True, text=True).strip()
     return json.dumps(info, indent=2)
 
-def chat_stream(messages, model="llama-3.1-70b-versatile", temperature=0.75, max_tokens=4096, tool_choice="auto"):
-    """Stream response from the AI model."""
+def chat(messages, model="llama3.1-70b", temperature=0.75, max_tokens=4096, tool_choice="auto"):
+    """Gets response from the AI model (no streaming)."""
     response = client.chat.completions.create(
         messages=messages,
         model=model,
         temperature=temperature,
         max_tokens=max_tokens,
-        stream=True,
         tools=tools,
         tool_choice=tool_choice,
     )
 
-    full_response = ""
-    tool_calls = None
-    for chunk in response:
-        if chunk.choices[0].delta.content is not None:
-            content = chunk.choices[0].delta.content
-            print(f"{bcolors.OKBLUE}{content}{bcolors.ENDC}", end="", flush=True)
-            full_response += content
-        if chunk.choices[0].delta.tool_calls:
-            tool_calls = chunk.choices[0].delta.tool_calls
+    full_response = response.choices[0].message.content
+    tool_calls = response.choices[0].message.tool_calls
 
-    print()  # New line after the full response
+    print(f"{bcolors.OKBLUE}{full_response}{bcolors.ENDC}") 
     return full_response, tool_calls
 
 def save_command_history(command, output, filename="command_history.txt"):
@@ -275,7 +267,8 @@ def handle_tool_calls(tool_calls, trust_mode):
                     "name": "remove_scheduled_task",
                     "content": result
                 })
-    return None
+    return ""  # Return an empty string if no tool calls were handled
+
 
 def get_user_preferences(filename="user_pref.json"):
     """Loads or prompts for user preferences and saves them if necessary."""
@@ -514,13 +507,18 @@ Always feel free to rely on my tools. I am here to serve as your trusted Linux c
         context_history.append({"role": "user", "content": user_input})
         start = time.time()
 
-        assistant_response, tool_calls = chat_stream(context_history)
+        assistant_response, tool_calls = chat(context_history) 
+
+        # Ensure assistant_response is a string, even if it's None
+        assistant_response = assistant_response or ""
 
         handle_tool_calls(tool_calls, trust_mode)
 
         # Get a follow-up response from the assistant after tool execution
         if tool_calls:
-            follow_up_response, _ = chat_stream(context_history, tool_choice="none")
+            follow_up_response, _ = chat(context_history, tool_choice="none")
+            # Ensure follow_up_response is a string, even if it's empty
+            follow_up_response = follow_up_response or ""
             assistant_response += "\n" + follow_up_response
 
         context_history.append({"role": "assistant", "content": assistant_response})
