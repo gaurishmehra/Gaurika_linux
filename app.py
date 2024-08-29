@@ -382,7 +382,7 @@ def process_url(session, url):
     return f"URL: {url}\n\nContent:\n{cleaned_content}"
 
 def WebTool(query):
-    urls = google_search(query, num_results=5)
+    urls = google_search(query, num_results=10)
 
     if not urls:
         print("No URLs found.")
