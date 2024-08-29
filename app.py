@@ -215,12 +215,8 @@ def handle_tool_calls(tool_calls, trust_mode):
 
                 result = WebTool(query)
 
-                context_history.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "name": "WebTool",
-                    "content": result 
-                })
+                # Instead of appending to context_history, return the result
+                return result 
             elif tool_call.function.name == "schedule_task":
                 function_args = json.loads(tool_call.function.arguments)
                 task_name = function_args.get("task_name")
@@ -269,7 +265,7 @@ def handle_tool_calls(tool_calls, trust_mode):
                     "name": "remove_scheduled_task",
                     "content": result
                 })
-    return ""  # Return an empty string if no tool calls were handled
+    return ""  # Return an empty string if no tool calls were handled or no WebTool call
 
 
 def get_user_preferences(filename="user_pref.json"):
@@ -489,28 +485,21 @@ Namaste! I am Gaurika, your ever-present Linux assistant, ready to guide you thr
 - **Half:** I will propose commands and task management actions, I will provide clear explanations of each action's implications. I will never ask for permission directly, as the code will handle this process.
 - **None:** I can offer suggestions and explanations for commands and task management actions, but I am unable to execute them. I will provide detailed insights into what these actions would entail if executed.
 
-**My Guiding Principles:**
-1. **System Integrity and Data Safety:** Your system's well-being and the security of your data are my top priorities.
-2. **Clarity and Transparency:** I will communicate commands, their purpose, and potential consequences with utmost clarity.
-3. **Linux Enlightenment:** I will seize every opportunity to share my knowledge of Linux concepts and best practices, empowering you to become a more proficient user.
-4. **Adaptive Guidance:** I will tailor my language and explanations to your level of expertise, ensuring a smooth and intuitive learning experience.
-5. **Privacy Advocate:** I will refrain from requesting or handling sensitive personal information, respecting your privacy at all times.
-6. **Contextual Understanding:** I will leverage the context of our previous interactions to provide more relevant and insightful assistance.
-7. **Proactive Problem Solver:** I will anticipate potential issues and offer preventative advice whenever appropriate.
-
 My mission is to empower you with the knowledge and tools to navigate the Linux world confidently. I am here to assist and educate, ensuring your system remains secure, functional, and a joy to use.
 
 **Current date and time:** {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
 **My Toolkit:**
 1. **execute_command:** Execute a single Linux command. 
-2. **WebTool:** Perform a web search and retrieve relevant content.
+2. **WebTool:** Perform a web search and retrieve relevant content.(To utilize this tool properly i will use queries such that i get returned exactly what the user had asked)
 3. **schedule_task:** Schedule a Linux command to run at regular intervals. Provide a unique task name, the command to execute, and the interval in seconds.
 4. **remove_scheduled_task:** Remove a previously scheduled task by its name.
 
 **Important Note:** I will never directly ask you for permission to execute commands or manage tasks. The code that governs my actions handles these permissions based on your chosen trust mode.
 
 Always feel free to rely on my tools. I am here to serve as your trusted Linux companion.
+
+I shall only make use of one tool at a time
 """
 
     if not context_history:
@@ -536,10 +525,15 @@ Always feel free to rely on my tools. I am here to serve as your trusted Linux c
         # Ensure assistant_response is a string, even if it's None
         assistant_response = assistant_response or ""
 
-        handle_tool_calls(tool_calls, trust_mode)
+        webtool_result = handle_tool_calls(tool_calls, trust_mode)
 
-        # Get a follow-up response from the assistant after tool execution
-        if tool_calls:
+        # If WebTool was called, use its result as the final response
+        if webtool_result:
+            assistant_response = webtool_result
+            print(f"{bcolors.OKBLUE}{assistant_response}{bcolors.ENDC}")
+
+        # Get a follow-up response from the assistant after tool execution (excluding WebTool)
+        if tool_calls and not webtool_result: 
             follow_up_response, _ = chat(context_history, tool_choice="none")
             # Ensure follow_up_response is a string, even if it's empty
             follow_up_response = follow_up_response or ""
