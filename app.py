@@ -38,7 +38,6 @@ cohere_key = os.getenv("COHERE_API_KEY")
 cse_api_key = os.getenv('CSE_API_KEY')
 search_engine_id = os.getenv('SEARCH_ENGINE_ID')
 
-embeddings_model = CohereEmbeddings(cohere_api_key=cohere_key)
 # Set a global socket timeout
 socket.setdefaulttimeout(1)
 
@@ -501,12 +500,6 @@ def WebTool(query):
 
     # Load and split markdown files
     md_header_splits = load_and_split_markdown_files(markdown_folder)
-
-    retriever = FAISS.from_documents(
-        md_header_splits, CohereEmbeddings(model="embed-english-v3.0")
-    ).as_retriever(search_kwargs={"k": 10})
-
-    query = "LangChain text generation"
 
     # Initialize the retriever (assuming it's already defined)
     retriever = FAISS.from_documents(
