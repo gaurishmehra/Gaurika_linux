@@ -1,48 +1,51 @@
-# Gaurika: Your Linux Companion
+# Gaurika: Your Intuitive Linux Companion
 
-Gaurika is an AI-powered Linux assistant designed to simplify your Linux experience. It can assist with tasks, provide information, execute commands (based on your trust settings), and even schedule tasks.
+Gaurika is an AI-powered Linux assistant designed to make your Linux experience smoother and more enjoyable. Whether you're a seasoned Linux user or just starting out, Gaurika can help you with tasks, provide information, execute commands (with your permission), and even schedule tasks, all through a natural language interface. You can even choose to interact with Gaurika using your voice!
 
 ## Features
 
-- **Command Execution:** Execute Linux commands with different trust modes (full, half, none).
-- **Web Search:** Perform web searches and retrieve relevant content using the WebTool.
-- **Task Scheduling:** Schedule Linux commands to run at regular intervals.
-- **Contextual Awareness:** Remembers previous interactions for more relevant assistance.
-- **System Information:** Provides basic system information (OS, kernel, CPU, memory).
-- **User Preferences:** Stores user preferences (name, Linux username, distribution, trust mode).
-- **Command History:** Logs executed commands and their outputs.
-- **Color-Coded Output:** Makes the output more visually appealing and easier to understand.
+- **Command Execution:** Execute Linux commands easily. Gaurika offers three trust modes (full, half, none) to control how much autonomy you give it. 
+- **Web Search:** Get answers to your questions quickly using the integrated WebTool, powered by the Cerebras API.
+- **Task Scheduling:** Automate routine tasks by scheduling Linux commands to run at specific intervals.
+- **Contextual Awareness:** Gaurika remembers your past interactions, allowing for more relevant and helpful responses.
+- **System Information:** Get a quick overview of your system's specifications (OS, kernel, CPU, memory).
+- **User Preferences:** Customize Gaurika by setting your preferred name, Linux username, distribution, trust mode, and interaction style (text or voice).
+- **Command History:** Keep track of the commands you've executed and their outputs.
+- **Color-Coded Output:** Enjoy a more visually appealing and easier-to-understand output.
+- **Voice Interaction:** Communicate with Gaurika using your voice thanks to seamless integration with speech-to-text and text-to-speech engines.
 
 ## Trust Modes
 
-Gaurika operates with three trust modes:
+Gaurika operates with three trust modes to ensure you're always in control:
 
-- **Full:** Gaurika has full autonomy to execute commands and manage scheduled tasks without requiring your confirmation.
-- **Half:** Gaurika will propose commands and task management actions but will await your approval before proceeding.
-- **None:** Gaurika can offer suggestions and explanations for commands and task management actions but cannot execute them.
+- **Full:** Gaurika has full autonomy to execute commands and manage scheduled tasks without requiring your confirmation. Use with caution!
+- **Half:** Gaurika will suggest commands and task management actions but will always ask for your approval before proceeding.
+- **None:** Gaurika can offer suggestions and explanations for commands and task management actions but cannot execute them. Perfect for learning or when you want to be extra careful.
 
 ## Getting Started
 
 1. **Prerequisites:**
    - Python 3.8 or higher
-   - cerebras API key
+   - Groq API key (get yours at [Groq website])
    - `dotenv` package (for managing environment variables)
-   - `requests`, `selectolax`, `concurrent.futures`, `urllib.parse`, `collections`, `socket`, `openai`, `json`, `subprocess`, `datetime`, `schedule`, `threading` packages
+   - `requests`, `selectolax`, `concurrent.futures`, `urllib.parse`, `collections`, `socket`, `openai`, `json`, `subprocess`, `datetime`, `schedule`, `threading`, `speech_recognition`, `pyttsx3` packages 
 
 2. **Installation:**
    - Clone this repository: `git clone https://github.com/gaurishmehra/gaurika.git`
    - Install the required packages: `pip install -r requirements.txt`
-   - Create a `.env` file in the root directory and add your cerebras API key:
+   - Create a `.env` file in the root directory and add your Groq API key:
      ```
-     cerebras_API_KEY=your_cerebras_api_key
+     GROQ_API_KEY=your_groq_api_key
      ```
 
 3. **Running Gaurika:**
    - Run the `app.py` script: `python app.py` or `python3 app.py` depending on your Python installation.
-   - Gaurika will prompt you for your name, Linux username, distribution, and trust mode if you haven't set them before.
-   - Start interacting with Gaurika by typing your requests.
+   - Gaurika will greet you and guide you through setting up your preferences (name, Linux username, distribution, trust mode, interaction style).
+   - Start interacting with Gaurika by typing your requests or speaking to it!
 
 ## Usage Examples
+
+**Text Interaction:**
 
 - **Execute a command:**
   - `execute_command: ls -l` (in full trust mode)
@@ -54,9 +57,19 @@ Gaurika operates with three trust modes:
 - **Remove a scheduled task:**
   - `remove_scheduled_task: backup_files`
 
+**Voice Interaction:**
+
+- **Execute a command:**
+  - "Gaurika, can you list all the files in this folder?"
+- **Perform a web search:** 
+  - "Gaurika, search the web for information about the latest Python release."
+- **Schedule a task:**
+  - "Gaurika, schedule a task to clean up my downloads folder every week."
+
+
 ## Disclaimer
 
-Gaurika is a powerful tool, and it's important to use it responsibly. Be cautious when using the full trust mode, as Gaurika will have the ability to execute any command on your system. Always review the commands Gaurika suggests before approving them in half trust mode.
+Gaurika is a powerful tool, and it's important to use it responsibly, especially in full trust mode. Always be mindful of the commands you execute or approve. 
 
 ## Contributing
 
@@ -64,4 +77,4 @@ Contributions are welcome! Please feel free to open issues or submit pull reques
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License. See the LICENSE file for details. 
