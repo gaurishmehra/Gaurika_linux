@@ -427,7 +427,6 @@ def delete_all_files_in_folder(folder_path):
 def WebTool(query):
     os.makedirs('markdown', exist_ok=True)
     delete_all_files_in_folder('markdown')
-    api_key = "AIzaSyBoCNgf7zyxkWdhJ43-PSP5dRPbrV9U72c"
     search_engine_id = "93eb093bb82b44a24"
     url = f"https://www.googleapis.com/customsearch/v1?key={cse_api_key}&cx={search_engine_id}&q={query}"
     response = requests.get(url)
